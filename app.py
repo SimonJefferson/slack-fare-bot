@@ -149,7 +149,6 @@ def handle_fare(ack, respond, command):
         dropoff_address,
     )
 
-    # Send a nice Block Kit message back to Slack
     respond(
         blocks=[
             {
