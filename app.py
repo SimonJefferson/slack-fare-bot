@@ -102,7 +102,7 @@ def make_lyft_deeplink(
 
 # ---------- Slash Command Handler ----------
 @app.command("/fare")
-def handle_fare(ack, respond, command):
+def handle_fare(ack, say, command):
     """
     Usage in Slack:
         /fare 45 2nd St San Francisco to SFO
@@ -112,7 +112,7 @@ def handle_fare(ack, respond, command):
 
     text = (command.get("text") or "").strip()
     if " to " not in text:
-        respond("Format: `/fare pickup address to dropoff address`")
+        say("Format: `/fare pickup address to dropoff address`")
         return
 
     pickup_address, dropoff_address = text.split(" to ", 1)
@@ -120,7 +120,7 @@ def handle_fare(ack, respond, command):
     dropoff_address = dropoff_address.strip()
 
     if not pickup_address or not dropoff_address:
-        respond("I need both a pickup and a dropoff address.")
+        say("I need both a pickup and a dropoff address.")
         return
 
     # Geocode both addresses with Mapbox
@@ -128,7 +128,7 @@ def handle_fare(ack, respond, command):
     dropoff_coords = geocode_with_mapbox(dropoff_address)
 
     if not pickup_coords or not dropoff_coords:
-        respond("I couldn't find one of those locations. Try being more specific.")
+        say("I couldn't find one of those locations. Try being more specific.")
         return
 
     uber_url = make_uber_deeplink(
@@ -149,7 +149,7 @@ def handle_fare(ack, respond, command):
         dropoff_address,
     )
 
-    respond(
+    say(
         blocks=[
             {
                 "type": "section",
