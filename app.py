@@ -107,7 +107,7 @@ def handle_fare(ack, say, command):
     Usage in Slack:
         /fare 45 2nd St San Francisco to SFO
     """
-    # Acknowledge so Slack doesn’t time out
+    # Acknowledge immediately to prevent timeouts
     ack()
 
     text = (command.get("text") or "").strip()
@@ -181,7 +181,7 @@ def handle_fare(ack, say, command):
 def slack_fare():
     """
     This is the endpoint Slack calls for the /fare command.
-    Request URL in Slack should be:
+    Request URL in Slack must be:
         https://YOUR-RENDER-URL.onrender.com/slack/fare
     """
     return handler.handle(request)
