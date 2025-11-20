@@ -1,4 +1,5 @@
 import os
+import urllib.parse
 
 from slack_bolt import App
 from slack_bolt.adapter.flask import SlackRequestHandler
@@ -7,6 +8,8 @@ from flask import Flask, request
 # ---------- Environment Variables ----------
 SLACK_BOT_TOKEN = os.environ["SLACK_BOT_TOKEN"]
 SLACK_SIGNING_SECRET = os.environ["SLACK_SIGNING_SECRET"]
+UBER_CLIENT_ID = os.environ.get("UBER_CLIENT_ID", "fare-bot")
+
 
 # ---------- Slack/Bolt App ----------
 app = App(
@@ -16,6 +19,36 @@ app = App(
 
 flask_app = Flask(__name__)
 handler = SlackRequestHandler(app)
+
+
+# ---------- Deep Link Helpers (address-only, no APIs) ----------
+def make_uber_deeplink_from_addresses(pickup_address: str, dropoff_address: str) -> str:
+    """
+    Create an Uber deep link using plain text addresses.
+    Note: Uber may or may not prefill pickup/dropoff, but this will at least open Uber
+    with our intent.
+    """
+    params = {
+        "action": "setPickup",
+        "client_id": UBER_CLIENT_ID,
+        "pickup[formatted_address]": pickup_address,
+        "dropoff[formatted_address]": dropoff_address,
+    }
+    query = urllib.parse.urlencode(params)
+    return f"https://m.uber.com/ul/?{query}"
+
+
+def make_lyft_deeplink_from_addresses(pickup_address: str, dropoff_address: str) -> str:
+    """
+    Create a Lyft deep link using plain text addresses.
+    """
+    params = {
+        "id": "lyft",
+        "pickup[address]": pickup_address,
+        "destination[address]": dropoff_address,
+    }
+    query = urllib.parse.urlencode(params)
+    return f"lyft://ridetype?{query}"
 
 
 # ---------- Slash Command Handler ----------
@@ -49,10 +82,56 @@ def handle_fare(ack, respond, command):
         )
         return
 
-    # Public message for everyone in the channel
+    uber_url = make_uber_deeplink_from_addresses(pickup, dropoff)
+    lyft_url = make_lyft_deeplink_from_addresses(pickup, dropoff)
+
+    # Public message for everyone in the channel, with buttons
     respond(
         response_type="in_channel",
-        text=f"*From:* {pickup}\n*To:* {dropoff}",
+        blocks=[
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "🚕 Fare helper",
+                    "emoji": True,
+                },
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*From:* {pickup}\n*To:* {dropoff}",
+                },
+            },
+            {"type": "divider"},
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Open in Uber",
+                            "emoji": True,
+                        },
+                        "url": uber_url,
+                        "action_id": "open_uber",
+                        "style": "primary",
+                    },
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Open in Lyft",
+                            "emoji": True,
+                        },
+                        "url": lyft_url,
+                        "action_id": "open_lyft",
+                    },
+                ],
+            },
+        ],
     )
 
 
